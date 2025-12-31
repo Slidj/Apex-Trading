@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Apex Safe Area Max</title>
+    <title>Apex Pro Asset Select</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://unpkg.com/lightweight-charts@4.1.1/dist/lightweight-charts.standalone.production.js"></script>
 
@@ -28,17 +28,13 @@
             user-select: none; -webkit-tap-highlight-color: transparent;
         }
 
-        /* HEADER - МАКСИМАЛЬНИЙ ВІДСТУП (90px + Safe Area) */
+        /* HEADER - SAFE AREA 90px */
         .header {
             position: absolute; top: 0; left: 0; right: 0; 
-            height: auto; 
-            min-height: 80px;
-            
+            height: auto; min-height: 80px;
             padding: 0 16px;
-            /* 🔥 ТУТ ЗМІНА: 90px бази + системний відступ */
             padding-top: calc(90px + env(safe-area-inset-top)); 
             padding-bottom: 10px;
-
             display: flex; justify-content: space-between; align-items: flex-start;
             z-index: 10; 
             background: linear-gradient(180deg, rgba(19, 23, 34, 0.95) 0%, rgba(19, 23, 34, 0) 100%);
@@ -63,18 +59,21 @@
         }
         .user-name { font-weight: 700; font-size: 14px; color: white; }
 
-        /* ПРАВА ЧАСТИНА */
+        /* ПРАВА ЧАСТИНА (АКТИВ + БАЛАНС) */
         .header-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
 
         .asset-btn {
             display: flex; flex-direction: column; align-items: flex-end;
-            background: rgba(30, 34, 45, 0.6); 
-            border: 1px solid var(--border-color); 
-            border-radius: 8px; padding: 4px 8px;
-            backdrop-filter: blur(5px);
+            background: rgba(30, 34, 45, 0.9); /* Більш темний фон для клікабельності */
+            border: 1px solid var(--accent-blue); /* Синя рамка, щоб видно що це кнопка */
+            border-radius: 8px; padding: 6px 10px;
+            backdrop-filter: blur(5px); cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            transition: transform 0.1s;
         }
-        .asset-name { font-size: 14px; font-weight: 700; color: white; display: flex; align-items: center; gap: 4px; }
-        .asset-payout { font-size: 10px; color: var(--accent-green); font-weight: 700; }
+        .asset-btn:active { transform: scale(0.95); }
+        .asset-name { font-size: 14px; font-weight: 700; color: white; display: flex; align-items: center; gap: 6px; }
+        .asset-payout { font-size: 11px; color: var(--accent-green); font-weight: 700; }
         
         .balance-box {
             text-align: right; background: rgba(30, 34, 45, 0.9); 
@@ -89,12 +88,9 @@
             position: absolute; top: 0; left: 0; right: 0; bottom: 80px; z-index: 1;
         }
 
-        /* FLOATING CHART CONTROLS - ОПУЩЕНІ ЩЕ НИЖЧЕ */
+        /* CHART CONTROLS */
         .chart-controls {
-            position: absolute; 
-            /* Відсунули до 180px, бо хедер тепер займає багато місця */
-            top: 180px; 
-            left: 16px; z-index: 5;
+            position: absolute; top: 180px; left: 16px; z-index: 5;
             display: flex; flex-direction: column; gap: 8px;
         }
         .control-btn {
@@ -124,20 +120,25 @@
         .input-label { font-size: 10px; color: var(--text-secondary); font-weight: 600; }
         .input-value { font-size: 15px; font-weight: 700; color: white; }
         
-        /* Selectors */
+        /* POPUP SELECTORS (SHARED STYLE) */
         .selector-overlay {
-            position: absolute; bottom: 90px; left: 16px; background: var(--panel-bg);
+            position: absolute; background: var(--panel-bg);
             border: 1px solid var(--border-color); border-radius: 12px; padding: 10px;
-            display: none; flex-direction: column; gap: 5px; z-index: 50; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            display: none; flex-direction: column; gap: 5px; z-index: 50; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5); min-width: 140px;
         }
         .selector-overlay.show { display: flex; }
         .select-option {
-            padding: 10px 20px; font-size: 14px; font-weight: 600; color: white;
-            border-radius: 6px; text-align: center; cursor: pointer;
+            padding: 10px 15px; font-size: 14px; font-weight: 600; color: white;
+            border-radius: 6px; cursor: pointer; display: flex; justify-content: space-between; align-items: center;
         }
+        .select-option:active { background: rgba(255,255,255,0.1); }
         .select-option.active { background: var(--accent-blue); }
 
-        /* BUY/SELL BUTTONS */
+        /* ASSET SELECTOR POSITION */
+        #asset-selector { top: 160px; right: 16px; bottom: auto; left: auto; } /* Зверху справа */
+
+        /* TRADE BUTTONS */
         .trade-buttons { display: flex; gap: 8px; width: 140px; }
         .trade-btn {
             flex: 1; height: 50px; border-radius: 10px; border: none; cursor: pointer;
@@ -170,13 +171,28 @@
         </div>
 
         <div class="header-right">
-            <button class="asset-btn" id="asset-btn">
-                <span class="asset-name">BTC/USDT <span style="font-size:10px">▼</span></span>
-                <span class="asset-payout">82% payout</span>
+            <button class="asset-btn" id="asset-btn" onclick="toggleSelector('asset-selector')">
+                <span class="asset-name" id="current-asset">BTC/USDT <span style="font-size:10px">▼</span></span>
+                <span class="asset-payout" id="current-payout">82% payout</span>
             </button>
             <div class="balance-box">
                 <span class="balance-val" id="balance">$1,000.00</span>
             </div>
+        </div>
+    </div>
+
+    <div id="asset-selector" class="selector-overlay">
+        <div class="select-option active" onclick="setAsset('btcusdt', 'BTC/USDT', '82%')">
+            BTC/USDT <span style="font-size:11px; color:#0faf59">82%</span>
+        </div>
+        <div class="select-option" onclick="setAsset('ethusdt', 'ETH/USDT', '78%')">
+            ETH/USDT <span style="font-size:11px; color:#0faf59">78%</span>
+        </div>
+        <div class="select-option" onclick="setAsset('solusdt', 'SOL/USDT', '75%')">
+            SOL/USDT <span style="font-size:11px; color:#0faf59">75%</span>
+        </div>
+        <div class="select-option" onclick="setAsset('dogeusdt', 'DOGE/USDT', '70%')">
+            DOGE/USDT <span style="font-size:11px; color:#0faf59">70%</span>
         </div>
     </div>
 
@@ -235,10 +251,9 @@
 
         const CONFIG = {
             up: '#0faf59', down: '#ff4a68', bg: '#131722', grid: 'rgba(255,255,255,0.03)',
-            bet: '#ffcf00' // Gold
+            bet: '#ffcf00'
         };
 
-        // --- USER DATA ---
         const user = tg.initDataUnsafe.user;
         if (user) {
             document.getElementById('user-name').innerText = user.first_name || 'Trader';
@@ -251,6 +266,7 @@
         let tradeAmount = 50;
         let lastPrice = 0;
         let balance = 1000;
+        let currentSymbol = 'btcusdt'; // Активна монета
 
         // --- CHART INIT ---
         const container = document.getElementById('chart-container');
@@ -259,7 +275,7 @@
             grid: { vertLines: { color: CONFIG.grid }, horzLines: { color: CONFIG.grid } },
             priceScale: { autoScale: true, scaleMargins: { top: 0.2, bottom: 0.2 } },
             timeScale: { timeVisible: true, secondsVisible: true, barSpacing: 12, minBarSpacing: 5, borderColor: 'transparent' },
-            crosshair: { mode: 1, vertLine: { style: 3, width: 1, color: '#555', labelBackgroundColor: '#555' }, horzLine: { style: 3, width: 1, color: '#555', labelBackgroundColor: '#555' } }
+            crosshair: { mode: 1, vertLine: { style: 3, width: 1, color: '#555' }, horzLine: { style: 3, width: 1, color: '#555' } }
         });
 
         const series = chart.addCandlestickSeries({
@@ -278,6 +294,7 @@
             if (ws) ws.close();
             series.setData([]);
             rawCandle = null;
+            currentSymbol = symbol;
 
             ws = new WebSocket(`wss://stream.binance.com:9443/ws/${symbol}@aggTrade`);
             
@@ -296,7 +313,8 @@
 
                 series.update(rawCandle);
                 
-                const digits = price < 1 ? 5 : 2; 
+                // Dynamic precision
+                const digits = price < 1 ? 5 : 2;
                 series.applyOptions({ priceFormat: { precision: digits, minMove: 1/Math.pow(10, digits) } });
                 lastPrice = price;
             };
@@ -314,8 +332,25 @@
 
         window.toggleSelector = (id) => {
             const el = document.getElementById(id);
-            document.querySelectorAll('.selector-overlay').forEach(s => { if(s.id !== id) s.classList.remove('show'); });
-            el.classList.toggle('show');
+            const isVisible = el.classList.contains('show');
+            // Hide all first
+            document.querySelectorAll('.selector-overlay').forEach(s => s.classList.remove('show'));
+            // Toggle requested if it wasn't visible
+            if (!isVisible) el.classList.add('show');
+        };
+
+        // --- ASSET SELECTION LOGIC ---
+        window.setAsset = (symbol, name, payout) => {
+            document.getElementById('current-asset').innerHTML = `${name} <span style="font-size:10px">▼</span>`;
+            document.getElementById('current-payout').innerText = `${payout} payout`;
+            
+            // Highlight active option
+            document.querySelectorAll('#asset-selector .select-option').forEach(el => el.classList.remove('active'));
+            event.currentTarget.classList.add('active'); // currentTarget to catch the click on div
+            
+            toggleSelector('asset-selector'); // Hide
+            connectWebSocket(symbol);
+            if(tg.HapticFeedback) tg.HapticFeedback.selectionChanged();
         };
 
         window.setTradeTime = (seconds) => {
@@ -324,35 +359,34 @@
             const sec = (seconds % 60).toString().padStart(2, '0');
             document.getElementById('time-display').innerText = `${min}:${sec}`;
             document.querySelectorAll('#time-selector .select-option').forEach(el => el.classList.remove('active'));
-            event.target.classList.add('active');
-            document.getElementById('time-selector').classList.remove('show');
+            event.currentTarget.classList.add('active');
+            toggleSelector('time-selector');
         };
 
         window.setTradeAmount = (amount) => {
             tradeAmount = amount;
             document.getElementById('amount-display').innerText = `$${amount}`;
             document.querySelectorAll('#amount-selector .select-option').forEach(el => el.classList.remove('active'));
-            event.target.classList.add('active');
-            document.getElementById('amount-selector').classList.remove('show');
+            event.currentTarget.classList.add('active');
+            toggleSelector('amount-selector');
         };
 
-        // --- TRADING LOGIC (GOLD LINE FIXED) ---
+        // --- TRADING LOGIC ---
         window.startTrade = (direction) => {
             if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
             
             const entryPrice = lastPrice;
             const endTime = Date.now() + (tradeDuration * 1000);
             
-            // Використовуємо ЗОЛОТИЙ колір для лінії ставки
-            const color = CONFIG.bet; 
+            const color = CONFIG.bet; // Gold
             const arrow = direction === 'UP' ? '▲' : '▼';
             
             const line = series.createPriceLine({
                 price: entryPrice, color: color, lineWidth: 2, lineStyle: 2,
                 title: `${arrow} $${tradeAmount}`,
                 axisLabelVisible: true,
-                axisLabelColor: color, // Золота плашка
-                axisLabelTextColor: '#000000' // Чорний текст на золоті
+                axisLabelColor: color,
+                axisLabelTextColor: '#000000'
             });
 
             const interval = setInterval(() => {
@@ -372,7 +406,8 @@
             if (direction === 'UP' && lastPrice > entryPrice) win = true;
             else if (direction === 'DOWN' && lastPrice < entryPrice) win = true;
 
-            const profit = tradeAmount * 0.82;
+            const payoutRate = parseFloat(document.getElementById('current-payout').innerText) / 100;
+            const profit = tradeAmount * payoutRate;
             
             if (win) balance += profit; 
             else balance -= tradeAmount;
@@ -399,11 +434,5 @@
             setTimeout(() => { modal.classList.remove('show'); }, 2000);
         }
 
-        document.addEventListener('click', (e) => {
-            if (!e.target.closest('.input-group') && !e.target.closest('.selector-overlay')) {
-                document.querySelectorAll('.selector-overlay').forEach(s => s.classList.remove('show'));
-            }
-        });
-    </script>
-</body>
-</html>
+        // Global click to close
+        d
