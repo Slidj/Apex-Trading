@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Apex Safe Area</title>
+    <title>Apex Safe Area Max</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://unpkg.com/lightweight-charts@4.1.1/dist/lightweight-charts.standalone.production.js"></script>
 
@@ -28,29 +28,26 @@
             user-select: none; -webkit-tap-highlight-color: transparent;
         }
 
-        /* HEADER - SUPER SAFE FIX */
+        /* HEADER - МАКСИМАЛЬНИЙ ВІДСТУП (90px + Safe Area) */
         .header {
             position: absolute; top: 0; left: 0; right: 0; 
-            /* Робимо висоту адаптивною */
             height: auto; 
             min-height: 80px;
             
             padding: 0 16px;
-            /* 🔥 ГАРАНТОВАНИЙ ВІДСТУП: 50px бази + системний відступ */
-            /* Це опустить контент нижче будь-яких кнопок телеграму */
-            padding-top: calc(50px + env(safe-area-inset-top)); 
+            /* 🔥 ТУТ ЗМІНА: 90px бази + системний відступ */
+            padding-top: calc(90px + env(safe-area-inset-top)); 
             padding-bottom: 10px;
 
             display: flex; justify-content: space-between; align-items: flex-start;
             z-index: 10; 
             background: linear-gradient(180deg, rgba(19, 23, 34, 0.95) 0%, rgba(19, 23, 34, 0) 100%);
-            pointer-events: none; /* Щоб кліки проходили крізь пусті місця */
+            pointer-events: none; 
         }
 
-        /* Елементи всередині хедера клікабельні */
         .header > * { pointer-events: auto; }
 
-        /* ПРОФІЛЬ (Зліва) */
+        /* ПРОФІЛЬ */
         .user-profile { 
             display: flex; align-items: center; gap: 10px; 
             background: rgba(30, 34, 45, 0.9); 
@@ -66,7 +63,7 @@
         }
         .user-name { font-weight: 700; font-size: 14px; color: white; }
 
-        /* ПРАВА ЧАСТИНА (Актив + Баланс) */
+        /* ПРАВА ЧАСТИНА */
         .header-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
 
         .asset-btn {
@@ -92,11 +89,11 @@
             position: absolute; top: 0; left: 0; right: 0; bottom: 80px; z-index: 1;
         }
 
-        /* FLOATING CHART CONTROLS (Timeframes) */
+        /* FLOATING CHART CONTROLS - ОПУЩЕНІ ЩЕ НИЖЧЕ */
         .chart-controls {
             position: absolute; 
-            /* Опускаємо ще нижче, щоб точно не перекривало */
-            top: 140px; 
+            /* Відсунули до 180px, бо хедер тепер займає багато місця */
+            top: 180px; 
             left: 16px; z-index: 5;
             display: flex; flex-direction: column; gap: 8px;
         }
@@ -339,14 +336,14 @@
             document.getElementById('amount-selector').classList.remove('show');
         };
 
-        // --- TRADING LOGIC (GOLDEN) ---
+        // --- TRADING LOGIC (GOLD LINE FIXED) ---
         window.startTrade = (direction) => {
             if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
             
             const entryPrice = lastPrice;
             const endTime = Date.now() + (tradeDuration * 1000);
             
-            // ЗОЛОТА ЛІНІЯ ДЛЯ ВСІХ
+            // Використовуємо ЗОЛОТИЙ колір для лінії ставки
             const color = CONFIG.bet; 
             const arrow = direction === 'UP' ? '▲' : '▼';
             
@@ -355,7 +352,7 @@
                 title: `${arrow} $${tradeAmount}`,
                 axisLabelVisible: true,
                 axisLabelColor: color, // Золота плашка
-                axisLabelTextColor: '#000000' // Чорний текст
+                axisLabelTextColor: '#000000' // Чорний текст на золоті
             });
 
             const interval = setInterval(() => {
