@@ -9,32 +9,25 @@ const CONFIG = {
 
 // --- AUDIO SYSTEM (LOCAL FILES) ---
 const sounds = {
-    // Ваші локальні файли
     click: new Audio('sounds/Tap.wav'),
     win: new Audio('sounds/Win.wav'),
     loss: new Audio('sounds/Lose.wav')
 };
-
-// Налаштування гучності (0.5 = 50%)
 Object.values(sounds).forEach(s => s.volume = 0.5);
 
-// "Audio Unlock" - розблокування звуку при першому дотику до екрану
-// Це критично для iPhone/Android
+// Audio Unlock
 let audioUnlocked = false;
 document.addEventListener('click', () => {
     if (!audioUnlocked) {
-        Object.values(sounds).forEach(s => {
-            // Програємо і одразу ставимо на паузу, щоб "прогріти" рушій
-            s.play().then(() => s.pause()).catch(() => {});
-        });
+        Object.values(sounds).forEach(s => s.play().then(() => s.pause()).catch(() => {}));
         audioUnlocked = true;
     }
 }, { once: true });
 
 function playSound(type) {
     if (sounds[type]) {
-        sounds[type].currentTime = 0; // Скидаємо звук на початок (для швидких кліків)
-        sounds[type].play().catch(e => console.log('Audio error:', e));
+        sounds[type].currentTime = 0;
+        sounds[type].play().catch(() => {});
     }
 }
 
@@ -49,7 +42,7 @@ if (user) {
 let currentChartTF = 1; 
 let tradeDuration = 30; 
 let tradeAmount = 50;
-let lastPrice = 0; // РЕАЛЬНА ціна
+let lastPrice = 0; 
 let balance = 1000;
 let currentSymbol = 'btcusdt';
 
@@ -68,44 +61,34 @@ const series = chart.addCandlestickSeries({
     downColor: CONFIG.down, borderDownColor: CONFIG.down, wickDownColor: CONFIG.down,
 });
 
-// Лінія реальної ціни
 const realPriceLine = series.createPriceLine({
-    price: 0,
-    color: 'rgba(255, 255, 255, 0.4)',
-    lineWidth: 1,
-    lineStyle: 2, 
-    axisLabelVisible: false, 
-    title: '',
+    price: 0, color: 'rgba(255, 255, 255, 0.4)', lineWidth: 1, lineStyle: 2, axisLabelVisible: false, title: '',
 });
 
 window.onresize = () => chart.resize(container.clientWidth, container.clientHeight);
 window.resetZoom = () => chart.timeScale().scrollToRealTime();
 
-// --- SENTIMENT LOGIC ---
+// --- SENTIMENT ---
 function updateSentiment(price, prevPrice) {
     let buyPercent = 50;
-    
     if (prevPrice > 0) {
         const delta = price - prevPrice;
         const noise = (Math.random() - 0.5) * 15; 
-        
         if (delta > 0) buyPercent = 60 + (delta * 500) + noise;
         else buyPercent = 40 + (delta * 500) + noise;
     }
-
     buyPercent = Math.max(10, Math.min(90, buyPercent));
     const sellPercent = 100 - buyPercent;
-
+    
     const elUp = document.getElementById('sentiment-up');
     const elDown = document.getElementById('sentiment-down');
-    
-    if (elUp && elDown) {
+    if(elUp && elDown) {
         elUp.style.height = `${buyPercent}%`;
         elDown.style.height = `${sellPercent}%`;
     }
 }
 
-// --- DATA STREAM ---
+// --- DATA ---
 let ws = null;
 let rawCandle = null;
 let haCandle = null;
@@ -118,7 +101,6 @@ function connectWebSocket(symbol) {
     currentSymbol = symbol;
 
     ws = new WebSocket(`wss://stream.binance.com:9443/ws/${symbol}@aggTrade`);
-    
     ws.onmessage = (event) => {
         const data = JSON.parse(event.data);
         const price = parseFloat(data.p);
@@ -127,7 +109,6 @@ function connectWebSocket(symbol) {
         if (lastPrice > 0) updateSentiment(price, lastPrice);
         lastPrice = price; 
 
-        // Raw Candle
         if (!rawCandle || time > rawCandle.time) {
             if (haCandle) prevHaCandle = { ...haCandle };
             rawCandle = { time: time, open: rawCandle ? rawCandle.close : price, high: price, low: price, close: price };
@@ -137,18 +118,13 @@ function connectWebSocket(symbol) {
             rawCandle.close = price;
         }
 
-        // Heikin Ashi
         let haOpen = rawCandle.open;
-        if (prevHaCandle) {
-            haOpen = (prevHaCandle.open + prevHaCandle.close) / 2;
-        }
-        
+        if (prevHaCandle) haOpen = (prevHaCandle.open + prevHaCandle.close) / 2;
         const haClose = (rawCandle.open + rawCandle.high + rawCandle.low + rawCandle.close) / 4;
         const haHigh = Math.max(rawCandle.high, haOpen, haClose);
         const haLow = Math.min(rawCandle.low, haOpen, haClose);
 
         haCandle = { time: time, open: haOpen, high: haHigh, low: haLow, close: haClose };
-
         series.update(haCandle);
         realPriceLine.applyOptions({ price: lastPrice });
 
@@ -158,9 +134,9 @@ function connectWebSocket(symbol) {
 }
 connectWebSocket('btcusdt');
 
-// --- CONTROLS LOGIC ---
+// --- CONTROLS ---
 window.setChartTF = (seconds, btn) => {
-    playSound('click'); // Tap.wav
+    playSound('click');
     currentChartTF = seconds;
     series.setData([]); rawCandle = null;
     document.querySelectorAll('.control-btn').forEach(b => b.classList.remove('active'));
@@ -169,7 +145,7 @@ window.setChartTF = (seconds, btn) => {
 };
 
 window.toggleSelector = (id) => {
-    playSound('click'); // Tap.wav
+    playSound('click');
     const el = document.getElementById(id);
     const isVisible = el.classList.contains('show');
     document.querySelectorAll('.selector-overlay').forEach(s => s.classList.remove('show'));
@@ -200,38 +176,53 @@ window.setTradeTime = (seconds) => {
     toggleSelector('time-selector');
 };
 
+// Вибір суми (Шаблони)
 window.setTradeAmount = (amount) => {
     playSound('click');
     tradeAmount = amount;
     document.getElementById('amount-display').innerText = `$${amount}`;
     document.querySelectorAll('#amount-selector .select-option').forEach(el => el.classList.remove('active'));
     event.currentTarget.classList.add('active');
+    // Очистити поле вводу для краси
+    document.getElementById('manual-amount').value = '';
     toggleSelector('amount-selector');
+};
+
+// Ручне введення суми
+window.applyManualAmount = () => {
+    const input = document.getElementById('manual-amount');
+    const val = parseFloat(input.value);
+    
+    if (val && val > 0) {
+        playSound('click');
+        tradeAmount = val;
+        document.getElementById('amount-display').innerText = `$${val}`;
+        
+        // Знімаємо активність з шаблонів
+        document.querySelectorAll('#amount-selector .select-option').forEach(el => el.classList.remove('active'));
+        
+        toggleSelector('amount-selector'); // Закрити вікно
+    }
 };
 
 // --- TRADING LOGIC ---
 window.startTrade = (direction) => {
-    playSound('click'); // Tap.wav при натисканні кнопок торгівлі
-    
+    playSound('click');
     if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
     
     const entryPrice = lastPrice;
     const endTime = Date.now() + (tradeDuration * 1000);
-    
     const color = CONFIG.bet; 
     const arrow = direction === 'UP' ? '▲' : '▼';
     
     const line = series.createPriceLine({
         price: entryPrice, color: color, lineWidth: 2, lineStyle: 2,
         title: `${arrow} $${tradeAmount}`,
-        axisLabelVisible: true,
-        axisLabelColor: color,
-        axisLabelTextColor: '#000000'
+        axisLabelVisible: true, axisLabelColor: color, axisLabelTextColor: '#000000'
     });
 
     const interval = setInterval(() => {
         const remaining = Math.ceil((endTime - Date.now()) / 1000);
-        
         if (remaining <= 0) {
             clearInterval(interval);
             finishTrade(line, direction, entryPrice);
@@ -243,8 +234,6 @@ window.startTrade = (direction) => {
 
 function finishTrade(line, direction, entryPrice) {
     let win = false;
-    
-    // Перевірка перемоги по РЕАЛЬНІЙ ціні
     if (direction === 'UP' && lastPrice > entryPrice) win = true;
     else if (direction === 'DOWN' && lastPrice < entryPrice) win = true;
 
@@ -253,10 +242,10 @@ function finishTrade(line, direction, entryPrice) {
     
     if (win) {
         balance += profit;
-        playSound('win'); // Win.wav
+        playSound('win');
     } else {
         balance -= tradeAmount;
-        playSound('loss'); // Lose.wav
+        playSound('loss');
     }
     
     document.getElementById('balance').innerText = `$${balance.toFixed(2)}`;
@@ -283,7 +272,10 @@ function showResult(win, amount) {
 
 // Global click handlers
 document.addEventListener('click', (e) => {
-    if (!e.target.closest('.input-group') && !e.target.closest('.asset-btn') && !e.target.closest('.selector-overlay')) {
+    // Не закривати, якщо клікнули на інпут або кнопку застосування
+    if (!e.target.closest('.input-group') && 
+        !e.target.closest('.asset-btn') && 
+        !e.target.closest('.selector-overlay')) {
         document.querySelectorAll('.selector-overlay').forEach(s => s.classList.remove('show'));
     }
 });
