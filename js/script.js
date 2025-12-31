@@ -7,18 +7,34 @@ const CONFIG = {
     bet: '#ffcf00'
 };
 
-// --- AUDIO SYSTEM ---
+// --- AUDIO SYSTEM (LOCAL FILES) ---
 const sounds = {
-    click: document.getElementById('sound-click'),
-    win: document.getElementById('sound-win'),
-    loss: document.getElementById('sound-loss')
+    // Ваші локальні файли
+    click: new Audio('sounds/Tap.wav'),
+    win: new Audio('sounds/Win.wav'),
+    loss: new Audio('sounds/Lose.wav')
 };
+
+// Налаштування гучності (0.5 = 50%)
+Object.values(sounds).forEach(s => s.volume = 0.5);
+
+// "Audio Unlock" - розблокування звуку при першому дотику до екрану
+// Це критично для iPhone/Android
+let audioUnlocked = false;
+document.addEventListener('click', () => {
+    if (!audioUnlocked) {
+        Object.values(sounds).forEach(s => {
+            // Програємо і одразу ставимо на паузу, щоб "прогріти" рушій
+            s.play().then(() => s.pause()).catch(() => {});
+        });
+        audioUnlocked = true;
+    }
+}, { once: true });
 
 function playSound(type) {
     if (sounds[type]) {
-        sounds[type].currentTime = 0;
-        sounds[type].volume = 0.5; 
-        sounds[type].play().catch(e => console.log('Audio autoplay blocked', e));
+        sounds[type].currentTime = 0; // Скидаємо звук на початок (для швидких кліків)
+        sounds[type].play().catch(e => console.log('Audio error:', e));
     }
 }
 
@@ -33,7 +49,7 @@ if (user) {
 let currentChartTF = 1; 
 let tradeDuration = 30; 
 let tradeAmount = 50;
-let lastPrice = 0; // РЕАЛЬНА ціна (Raw)
+let lastPrice = 0; // РЕАЛЬНА ціна
 let balance = 1000;
 let currentSymbol = 'btcusdt';
 
@@ -52,37 +68,34 @@ const series = chart.addCandlestickSeries({
     downColor: CONFIG.down, borderDownColor: CONFIG.down, wickDownColor: CONFIG.down,
 });
 
-// Лінія реальної ціни (Bid line) - показує де реально ринок
+// Лінія реальної ціни
 const realPriceLine = series.createPriceLine({
     price: 0,
     color: 'rgba(255, 255, 255, 0.4)',
     lineWidth: 1,
-    lineStyle: 2, // Punkter
-    axisLabelVisible: false, // Не засмічуємо вісь, тільки візуально на графіку
+    lineStyle: 2, 
+    axisLabelVisible: false, 
     title: '',
 });
 
 window.onresize = () => chart.resize(container.clientWidth, container.clientHeight);
 window.resetZoom = () => chart.timeScale().scrollToRealTime();
 
-// --- SENTIMENT LOGIC (SIMULATION) ---
+// --- SENTIMENT LOGIC ---
 function updateSentiment(price, prevPrice) {
     let buyPercent = 50;
     
     if (prevPrice > 0) {
         const delta = price - prevPrice;
-        const noise = (Math.random() - 0.5) * 15; // Трохи хаосу
+        const noise = (Math.random() - 0.5) * 15; 
         
-        // Реакція на рух ціни
         if (delta > 0) buyPercent = 60 + (delta * 500) + noise;
         else buyPercent = 40 + (delta * 500) + noise;
     }
 
-    // Обмеження 10% - 90%
     buyPercent = Math.max(10, Math.min(90, buyPercent));
     const sellPercent = 100 - buyPercent;
 
-    // Оновлюємо UI (перевіряємо чи елементи існують в HTML)
     const elUp = document.getElementById('sentiment-up');
     const elDown = document.getElementById('sentiment-down');
     
@@ -111,13 +124,10 @@ function connectWebSocket(symbol) {
         const price = parseFloat(data.p);
         const time = Math.floor(data.T / (currentChartTF * 1000)) * currentChartTF;
 
-        // Оновлюємо Sentiment
         if (lastPrice > 0) updateSentiment(price, lastPrice);
-
-        // Оновлюємо глобальну реальну ціну
         lastPrice = price; 
 
-        // 1. Формуємо звичайну свічку (Raw)
+        // Raw Candle
         if (!rawCandle || time > rawCandle.time) {
             if (haCandle) prevHaCandle = { ...haCandle };
             rawCandle = { time: time, open: rawCandle ? rawCandle.close : price, high: price, low: price, close: price };
@@ -127,7 +137,7 @@ function connectWebSocket(symbol) {
             rawCandle.close = price;
         }
 
-        // 2. Рахуємо Heikin Ashi (Для краси графіка)
+        // Heikin Ashi
         let haOpen = rawCandle.open;
         if (prevHaCandle) {
             haOpen = (prevHaCandle.open + prevHaCandle.close) / 2;
@@ -139,13 +149,9 @@ function connectWebSocket(symbol) {
 
         haCandle = { time: time, open: haOpen, high: haHigh, low: haLow, close: haClose };
 
-        // 3. Оновлюємо графік
         series.update(haCandle);
-        
-        // 4. Оновлюємо лінію реальної ціни
         realPriceLine.applyOptions({ price: lastPrice });
 
-        // 5. UI
         const digits = price < 1 ? 5 : 2; 
         series.applyOptions({ priceFormat: { precision: digits, minMove: 1/Math.pow(10, digits) } });
     };
@@ -154,6 +160,7 @@ connectWebSocket('btcusdt');
 
 // --- CONTROLS LOGIC ---
 window.setChartTF = (seconds, btn) => {
+    playSound('click'); // Tap.wav
     currentChartTF = seconds;
     series.setData([]); rawCandle = null;
     document.querySelectorAll('.control-btn').forEach(b => b.classList.remove('active'));
@@ -162,6 +169,7 @@ window.setChartTF = (seconds, btn) => {
 };
 
 window.toggleSelector = (id) => {
+    playSound('click'); // Tap.wav
     const el = document.getElementById(id);
     const isVisible = el.classList.contains('show');
     document.querySelectorAll('.selector-overlay').forEach(s => s.classList.remove('show'));
@@ -169,6 +177,7 @@ window.toggleSelector = (id) => {
 };
 
 window.setAsset = (symbol, name, payout) => {
+    playSound('click');
     document.getElementById('current-asset').innerHTML = `${name} <span style="font-size:10px">▼</span>`;
     document.getElementById('current-payout').innerText = `${payout} payout`;
     
@@ -181,6 +190,7 @@ window.setAsset = (symbol, name, payout) => {
 };
 
 window.setTradeTime = (seconds) => {
+    playSound('click');
     tradeDuration = seconds;
     const min = Math.floor(seconds / 60).toString().padStart(2, '0');
     const sec = (seconds % 60).toString().padStart(2, '0');
@@ -191,6 +201,7 @@ window.setTradeTime = (seconds) => {
 };
 
 window.setTradeAmount = (amount) => {
+    playSound('click');
     tradeAmount = amount;
     document.getElementById('amount-display').innerText = `$${amount}`;
     document.querySelectorAll('#amount-selector .select-option').forEach(el => el.classList.remove('active'));
@@ -198,12 +209,12 @@ window.setTradeAmount = (amount) => {
     toggleSelector('amount-selector');
 };
 
-// --- TRADING LOGIC (REALISM + SOUNDS) ---
+// --- TRADING LOGIC ---
 window.startTrade = (direction) => {
-    playSound('click');
+    playSound('click'); // Tap.wav при натисканні кнопок торгівлі
+    
     if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
     
-    // Ставка по РЕАЛЬНІЙ ціні (lastPrice)
     const entryPrice = lastPrice;
     const endTime = Date.now() + (tradeDuration * 1000);
     
@@ -233,7 +244,7 @@ window.startTrade = (direction) => {
 function finishTrade(line, direction, entryPrice) {
     let win = false;
     
-    // Порівняння з реальною ціною в момент закриття
+    // Перевірка перемоги по РЕАЛЬНІЙ ціні
     if (direction === 'UP' && lastPrice > entryPrice) win = true;
     else if (direction === 'DOWN' && lastPrice < entryPrice) win = true;
 
@@ -242,10 +253,10 @@ function finishTrade(line, direction, entryPrice) {
     
     if (win) {
         balance += profit;
-        playSound('win');
+        playSound('win'); // Win.wav
     } else {
         balance -= tradeAmount;
-        playSound('loss');
+        playSound('loss'); // Lose.wav
     }
     
     document.getElementById('balance').innerText = `$${balance.toFixed(2)}`;
@@ -270,6 +281,7 @@ function showResult(win, amount) {
     setTimeout(() => { modal.classList.remove('show'); }, 2000);
 }
 
+// Global click handlers
 document.addEventListener('click', (e) => {
     if (!e.target.closest('.input-group') && !e.target.closest('.asset-btn') && !e.target.closest('.selector-overlay')) {
         document.querySelectorAll('.selector-overlay').forEach(s => s.classList.remove('show'));
