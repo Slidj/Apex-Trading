@@ -7,6 +7,22 @@ const CONFIG = {
     bet: '#ffcf00'
 };
 
+// --- AUDIO SYSTEM ---
+const sounds = {
+    click: document.getElementById('sound-click'),
+    win: document.getElementById('sound-win'),
+    loss: document.getElementById('sound-loss')
+};
+
+function playSound(type) {
+    if (sounds[type]) {
+        sounds[type].currentTime = 0;
+        sounds[type].volume = 0.5; 
+        sounds[type].play().catch(e => console.log('Audio autoplay blocked', e));
+    }
+}
+
+// --- USER DATA ---
 const user = tg.initDataUnsafe.user;
 if (user) {
     document.getElementById('user-name').innerText = user.first_name || 'Trader';
@@ -17,8 +33,7 @@ if (user) {
 let currentChartTF = 1; 
 let tradeDuration = 30; 
 let tradeAmount = 50;
-// lastPrice - це РЕАЛЬНА ціна (Raw), по якій ми будемо розраховувати виграш
-let lastPrice = 0; 
+let lastPrice = 0; // РЕАЛЬНА ціна (Raw)
 let balance = 1000;
 let currentSymbol = 'btcusdt';
 
@@ -37,24 +52,50 @@ const series = chart.addCandlestickSeries({
     downColor: CONFIG.down, borderDownColor: CONFIG.down, wickDownColor: CONFIG.down,
 });
 
-// Додаємо лінію РЕАЛЬНОЇ ціни (Bid line), як у брокерів
-// Вона показує, де саме зараз знаходиться ринок, незалежно від свічки
+// Лінія реальної ціни (Bid line) - показує де реально ринок
 const realPriceLine = series.createPriceLine({
     price: 0,
     color: 'rgba(255, 255, 255, 0.4)',
     lineWidth: 1,
     lineStyle: 2, // Punkter
-    axisLabelVisible: true,
+    axisLabelVisible: false, // Не засмічуємо вісь, тільки візуально на графіку
     title: '',
 });
 
 window.onresize = () => chart.resize(container.clientWidth, container.clientHeight);
 window.resetZoom = () => chart.timeScale().scrollToRealTime();
 
+// --- SENTIMENT LOGIC (SIMULATION) ---
+function updateSentiment(price, prevPrice) {
+    let buyPercent = 50;
+    
+    if (prevPrice > 0) {
+        const delta = price - prevPrice;
+        const noise = (Math.random() - 0.5) * 15; // Трохи хаосу
+        
+        // Реакція на рух ціни
+        if (delta > 0) buyPercent = 60 + (delta * 500) + noise;
+        else buyPercent = 40 + (delta * 500) + noise;
+    }
+
+    // Обмеження 10% - 90%
+    buyPercent = Math.max(10, Math.min(90, buyPercent));
+    const sellPercent = 100 - buyPercent;
+
+    // Оновлюємо UI (перевіряємо чи елементи існують в HTML)
+    const elUp = document.getElementById('sentiment-up');
+    const elDown = document.getElementById('sentiment-down');
+    
+    if (elUp && elDown) {
+        elUp.style.height = `${buyPercent}%`;
+        elDown.style.height = `${sellPercent}%`;
+    }
+}
+
 // --- DATA STREAM ---
 let ws = null;
 let rawCandle = null;
-let haCandle = null; // Heikin Ashi candle
+let haCandle = null;
 let prevHaCandle = null;
 
 function connectWebSocket(symbol) {
@@ -70,23 +111,23 @@ function connectWebSocket(symbol) {
         const price = parseFloat(data.p);
         const time = Math.floor(data.T / (currentChartTF * 1000)) * currentChartTF;
 
-        // Оновлюємо глобальну реальну ціну для ставок
+        // Оновлюємо Sentiment
+        if (lastPrice > 0) updateSentiment(price, lastPrice);
+
+        // Оновлюємо глобальну реальну ціну
         lastPrice = price; 
 
-        // 1. Формуємо звичайну свічку (для розрахунків)
+        // 1. Формуємо звичайну свічку (Raw)
         if (!rawCandle || time > rawCandle.time) {
-            // Нова свічка
             if (haCandle) prevHaCandle = { ...haCandle };
             rawCandle = { time: time, open: rawCandle ? rawCandle.close : price, high: price, low: price, close: price };
         } else {
-            // Оновлення поточної
             rawCandle.high = Math.max(rawCandle.high, price);
             rawCandle.low = Math.min(rawCandle.low, price);
             rawCandle.close = price;
         }
 
-        // 2. Рахуємо Heikin Ashi (Тільки для візуала!)
-        // Це робить графік плавним, але ціна lastPrice залишається "сирою"
+        // 2. Рахуємо Heikin Ashi (Для краси графіка)
         let haOpen = rawCandle.open;
         if (prevHaCandle) {
             haOpen = (prevHaCandle.open + prevHaCandle.close) / 2;
@@ -98,13 +139,13 @@ function connectWebSocket(symbol) {
 
         haCandle = { time: time, open: haOpen, high: haHigh, low: haLow, close: haClose };
 
-        // 3. Малюємо HA свічку
+        // 3. Оновлюємо графік
         series.update(haCandle);
         
-        // 4. Оновлюємо лінію реальної ціни (щоб юзер бачив різницю)
+        // 4. Оновлюємо лінію реальної ціни
         realPriceLine.applyOptions({ price: lastPrice });
 
-        // UI
+        // 5. UI
         const digits = price < 1 ? 5 : 2; 
         series.applyOptions({ priceFormat: { precision: digits, minMove: 1/Math.pow(10, digits) } });
     };
@@ -157,12 +198,12 @@ window.setTradeAmount = (amount) => {
     toggleSelector('amount-selector');
 };
 
-// --- TRADING LOGIC (REAL HARDCORE) ---
+// --- TRADING LOGIC (REALISM + SOUNDS) ---
 window.startTrade = (direction) => {
+    playSound('click');
     if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
     
-    // 🔥 ВАЖЛИВО: Ставка приймається по lastPrice (РЕАЛЬНА ціна), а не по свічці
-    // Свічка може бути на 50000, а реальна ціна в цю мілісекунду 49995.
+    // Ставка по РЕАЛЬНІЙ ціні (lastPrice)
     const entryPrice = lastPrice;
     const endTime = Date.now() + (tradeDuration * 1000);
     
@@ -192,16 +233,20 @@ window.startTrade = (direction) => {
 function finishTrade(line, direction, entryPrice) {
     let win = false;
     
-    // 🔥 ФІНАЛ: Порівнюємо з lastPrice (РЕАЛЬНА ціна в момент закриття)
-    // Це створює ефект "останнього ривка", коли ти можеш програти в останню секунду
+    // Порівняння з реальною ціною в момент закриття
     if (direction === 'UP' && lastPrice > entryPrice) win = true;
     else if (direction === 'DOWN' && lastPrice < entryPrice) win = true;
 
     const payoutRate = parseFloat(document.getElementById('current-payout').innerText) / 100;
     const profit = tradeAmount * payoutRate;
     
-    if (win) balance += profit; 
-    else balance -= tradeAmount;
+    if (win) {
+        balance += profit;
+        playSound('win');
+    } else {
+        balance -= tradeAmount;
+        playSound('loss');
+    }
     
     document.getElementById('balance').innerText = `$${balance.toFixed(2)}`;
     series.removePriceLine(line);
@@ -225,7 +270,6 @@ function showResult(win, amount) {
     setTimeout(() => { modal.classList.remove('show'); }, 2000);
 }
 
-// Global click handlers
 document.addEventListener('click', (e) => {
     if (!e.target.closest('.input-group') && !e.target.closest('.asset-btn') && !e.target.closest('.selector-overlay')) {
         document.querySelectorAll('.selector-overlay').forEach(s => s.classList.remove('show'));
