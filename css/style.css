@@ -150,3 +150,38 @@ body {
 .result-modal.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 .res-title { font-size: 12px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px; }
 .res-val { font-size: 28px; font-weight: 900; margin: 5px 0; }
+/* ... (Всі попередні стилі залишаються) ... */
+
+/* SENTIMENT BAR - VERICAL LEFT */
+.sentiment-bar {
+    position: absolute;
+    left: 0;
+    top: 90px; /* Нижче хедера */
+    bottom: 90px; /* Вище панелі */
+    width: 6px;
+    background: #2a2e39;
+    z-index: 5;
+    display: flex;
+    flex-direction: column;
+    border-radius: 0 4px 4px 0;
+    overflow: hidden;
+    box-shadow: 2px 0 10px rgba(0,0,0,0.3);
+}
+
+.sentiment-fill {
+    width: 100%;
+    transition: height 0.5s ease-in-out; /* Плавна анімація зміни */
+    position: relative;
+    display: flex;
+    justify-content: center;
+}
+
+.sentiment-fill.up { background: var(--accent-green); align-items: flex-start; }
+.sentiment-fill.down { background: var(--accent-red); align-items: flex-end; }
+
+/* Відсотки, що з'являються при натисканні (можна сховати, якщо заважають) */
+.sentiment-val {
+    display: none; /* Поки сховаємо, щоб не захаращувати */
+    font-size: 9px; font-weight: 700; color: white;
+    position: absolute; left: 10px; background: rgba(0,0,0,0.5); padding: 2px 4px; border-radius: 4px;
+}
