@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Apex Stable</title>
+    <title>Apex Final</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://unpkg.com/lightweight-charts@4.1.1/dist/lightweight-charts.standalone.production.js"></script>
 
@@ -15,7 +15,7 @@
             --candle-up: #00ffbb;
             --candle-down: #ff2d55;
             --bet-gold: #ffcf00;
-            --glass-panel: rgba(20, 22, 30, 0.85);
+            --glass-panel: rgba(30, 34, 45, 0.85);
             --border-glass: rgba(255, 255, 255, 0.1);
             --active-btn: rgba(255, 255, 255, 0.15);
         }
@@ -30,7 +30,7 @@
         
         #chart-container { position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 1; }
 
-        /* HEADER (SAFE AREA 90px) */
+        /* HEADER */
         .header {
             position: absolute; top: 0; left: 0; right: 0;
             padding: 0 16px; padding-top: calc(90px + env(safe-area-inset-top)); 
@@ -53,7 +53,6 @@
 
         .market-controls { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
         
-        /* Chart Timeframe Selector */
         .chart-tf-selector {
             display: flex; gap: 2px; background: var(--glass-panel); 
             padding: 3px; border-radius: 8px; border: 1px solid var(--border-glass);
@@ -251,17 +250,16 @@
             if(tg.HapticFeedback) tg.HapticFeedback.selectionChanged();
         }
 
-        // --- ENGINE: SMOOTH BUT STABLE ---
+        // --- ENGINE ---
         let ws = null;
         let realHA = null, displayHA = null, lastRawHA = null;
         let rawCandle = null;
         let lastPrice = 0;
-        let lastRenderTime = 0; // Для троттлінгу рендеру
+        let lastRenderTime = 0;
 
         const priceElement = document.getElementById('price');
         const assetSelect = document.getElementById('asset-select');
 
-        // Animation Loop (Тільки для 1s)
         function animate() {
             if (currentChartTF === 1 && realHA && displayHA) {
                 if (realHA.time > displayHA.time) {
@@ -276,9 +274,9 @@
                 }
                 series.update(displayHA);
                 requestAnimationFrame(animate);
+            } else if (currentChartTF > 1) {
             } else {
-                // Для 30s/1m анімація вимкнена, щоб не було тремтіння
-                // Рендеримо в onmessage з затримкою
+                requestAnimationFrame(animate);
             }
         }
         requestAnimationFrame(animate);
@@ -319,16 +317,10 @@
 
                 realHA = calculateHeikinAshi(rawCandle.time, rawCandle.open, rawCandle.high, rawCandle.low, rawCandle.close);
                 
-                // --- ЛОГІКА ОНОВЛЕННЯ ---
                 if (currentChartTF === 1) {
-                    // 1S: Оновлюємо таргет для плавної анімації
                     if (!displayHA) displayHA = { ...realHA };
                 } else {
-                    // 30S / 1M: СТАБІЛІЗАЦІЯ
-                    displayHA = realHA; // Синхронізація
-                    
-                    // Троттлінг: Оновлюємо графік не частіше ніж раз на 200мс
-                    // Це прибирає тремтіння (Jitter), але залишає рух живим
+                    displayHA = realHA;
                     const now = Date.now();
                     if (now - lastRenderTime > 200) { 
                         series.update(realHA);
@@ -336,7 +328,6 @@
                     }
                 }
 
-                // ЦІНА ОНОВЛЮЄТЬСЯ МИТТЄВО (без затримок)
                 const digits = price < 1 ? 5 : 2; 
                 if(currentChartTF === 1) series.applyOptions({ priceFormat: { precision: digits, minMove: 1/Math.pow(10, digits) } });
 
@@ -350,31 +341,34 @@
         assetSelect.addEventListener('change', (e) => connectWebSocket(e.target.value));
         connectWebSocket('btcusdt');
 
-        // --- TRADING LOGIC ---
+        // --- TRADING LOGIC WITH ARROW ---
         let balance = 1000;
         let betLine = null;
         let timerInterval = null;
 
         function startTrade(direction) {
-            if (betLine) return; // Одна угода за раз (для простоти)
+            if (betLine) return; 
             if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred('heavy');
             
-            // Фіксуємо по ВІЗУАЛЬНІЙ ціні (те, що бачить юзер)
             const entryPrice = displayHA ? displayHA.close : lastPrice;
             const betAmount = 50;
             const lineColor = CONFIG.bet;
             
             let timeLeft = tradeDuration;
+            // Визначаємо стрілку
+            const arrow = direction === 'UP' ? '▲' : '▼';
 
             betLine = series.createPriceLine({
                 price: entryPrice, color: lineColor, lineWidth: 2, lineStyle: 0, 
-                title: `⏱ ${timeLeft}s`, 
+                // Додаємо стрілку до заголовка
+                title: `${arrow} ⏱ ${timeLeft}s`, 
                 axisLabelVisible: true, axisLabelColor: lineColor, axisLabelTextColor: '#000000'
             });
 
             timerInterval = setInterval(() => {
                 timeLeft--;
-                if (betLine) betLine.applyOptions({ title: `⏱ ${timeLeft}s` });
+                // Оновлюємо таймер, зберігаючи стрілку
+                if (betLine) betLine.applyOptions({ title: `${arrow} ⏱ ${timeLeft}s` });
                 
                 if (timeLeft <= 0) {
                     clearInterval(timerInterval);
