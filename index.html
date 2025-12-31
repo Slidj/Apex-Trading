@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Apex Ultimate</title>
+    <title>Apex Ultimate Fixed</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://unpkg.com/lightweight-charts@4.1.1/dist/lightweight-charts.standalone.production.js"></script>
 
@@ -15,9 +15,8 @@
             --candle-up: #00ffbb;
             --candle-down: #ff2d55;
             --bet-gold: #ffcf00;
-            /* Скляний фон для панелей */
-            --glass-panel: rgba(20, 22, 30, 0.7);
-            --border-glass: rgba(255, 255, 255, 0.08);
+            --glass-panel: rgba(20, 22, 30, 0.8);
+            --border-glass: rgba(255, 255, 255, 0.1);
         }
 
         body {
@@ -28,31 +27,40 @@
             user-select: none; -webkit-tap-highlight-color: transparent;
         }
         
-        /* ГРАФІК НА ВЕСЬ ЕКРАН (БЕЗ РАМОК) */
+        /* ГРАФІК НА ВЕСЬ ЕКРАН */
         #chart-container { 
             position: absolute; 
-            top: 0; left: 0; right: 0; bottom: 0; /* На весь екран */
-            z-index: 1; /* Найнижчий шар */
+            top: 0; left: 0; right: 0; bottom: 0; 
+            z-index: 1; 
         }
 
-        /* HEADER - Floating Glass */
+        /* HEADER - ВИПРАВЛЕНО ВІДСТУП (90px) */
         .header {
             position: absolute; top: 0; left: 0; right: 0;
             padding: 0 16px; 
-            padding-top: calc(10px + env(safe-area-inset-top)); 
-            height: 70px; 
+            /* Повернули великий відступ, щоб не лізти під кнопки */
+            padding-top: calc(90px + env(safe-area-inset-top)); 
             
-            /* Ефект розмиття фону під хедером */
-            background: linear-gradient(180deg, rgba(14,15,20,0.9) 0%, rgba(14,15,20,0) 100%);
+            /* Висота блоку контенту */
+            height: 60px; 
             
-            display: flex; justify-content: space-between; align-items: center; 
-            z-index: 20; pointer-events: none; /* Щоб можна було клікати на графік під хедером, де пусто */
+            /* Градієнт зверху, щоб читалось на фоні графіка */
+            background: linear-gradient(180deg, rgba(14,15,20,0.95) 0%, rgba(14,15,20,0.8) 60%, rgba(14,15,20,0) 100%);
+            
+            display: flex; justify-content: space-between; align-items: flex-start; /* flex-start щоб притиснути до верху відступу */
+            z-index: 20; pointer-events: none;
         }
         
-        .header > * { pointer-events: auto; } /* Елементи хедера клікабельні */
+        .header > * { pointer-events: auto; }
 
         /* USER PROFILE */
-        .user-profile { display: flex; align-items: center; gap: 10px; background: var(--glass-panel); padding: 4px 10px 4px 4px; border-radius: 30px; border: 1px solid var(--border-glass); backdrop-filter: blur(10px); }
+        .user-profile { 
+            display: flex; align-items: center; gap: 10px; 
+            background: var(--glass-panel); padding: 4px 10px 4px 4px; 
+            border-radius: 30px; border: 1px solid var(--border-glass); 
+            backdrop-filter: blur(10px);
+            margin-top: 5px; /* Мікро-корекція */
+        }
         .user-avatar {
             width: 34px; height: 34px; border-radius: 50%;
             background: #333; object-fit: cover;
@@ -62,7 +70,7 @@
         .balance { font-size: 11px; color: var(--bet-gold); font-weight: 600; }
 
         /* RIGHT CONTROLS */
-        .market-controls { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+        .market-controls { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
         
         /* Timeframe Selector */
         .tf-selector {
@@ -74,7 +82,7 @@
             font-size: 11px; font-weight: 700; color: var(--text-secondary);
             padding: 4px 8px; border-radius: 6px; cursor: pointer; transition: all 0.2s;
         }
-        .tf-btn.active { background: rgba(255,255,255,0.1); color: white; }
+        .tf-btn.active { background: rgba(255,255,255,0.15); color: white; }
 
         .asset-wrapper {
             display: flex; align-items: center; gap: 6px;
@@ -86,8 +94,8 @@
         }
         
         /* PRICE */
-        .price-container { display: flex; align-items: center; gap: 6px; margin-top: 4px; text-shadow: 0 2px 10px rgba(0,0,0,0.5); }
-        .price { font-size: 24px; font-weight: 800; font-family: 'SF Mono', monospace; letter-spacing: -0.5px; }
+        .price-container { display: flex; align-items: center; gap: 6px; margin-top: 4px; text-shadow: 0 2px 10px rgba(0,0,0,0.8); }
+        .price { font-size: 26px; font-weight: 800; font-family: 'SF Mono', monospace; letter-spacing: -0.5px; }
         
         /* ZOOM BUTTON */
         #reset-zoom-btn {
@@ -104,7 +112,7 @@
         /* FOOTER CONTROLS */
         .controls-wrapper {
             position: absolute; bottom: 0; left: 0; right: 0; 
-            padding: 0 16px 30px 16px; /* Більше відступу знизу для iPhone */
+            padding: 0 16px 30px 16px; 
             background: linear-gradient(0deg, rgba(14,15,20,1) 0%, rgba(14,15,20,0) 100%);
             display: flex; gap: 12px; align-items: center; z-index: 20;
         }
@@ -177,7 +185,7 @@
     <script>
         const tg = window.Telegram.WebApp;
         tg.expand();
-        tg.setHeaderColor('#0e0f14'); // Зливається з фоном
+        tg.setHeaderColor('#0e0f14');
 
         const CONFIG = { up: '#00ffbb', down: '#ff2d55', bet: '#ffcf00' };
         
@@ -188,12 +196,11 @@
             if (user.photo_url) document.getElementById('user-avatar').src = user.photo_url;
         }
 
-        // --- 2. CHART FULLSCREEN SETUP ---
+        // --- 2. CHART SETUP ---
         const container = document.getElementById('chart-container');
         const chart = LightweightCharts.createChart(container, {
             layout: { background: { type: 'solid', color: 'transparent' }, textColor: '#858d9d', fontSize: 12, fontFamily: "system-ui" },
             grid: { vertLines: { visible: false }, horzLines: { color: 'rgba(255,255,255,0.04)', style: 1 } },
-            // FULLSCREEN FIX: Маленькі відступи, щоб графік займав майже все, але не прилипав
             priceScale: { autoScale: true, scaleMargins: { top: 0.15, bottom: 0.15 } }, 
             rightPriceScale: { borderColor: 'transparent' },
             timeScale: { 
@@ -220,23 +227,20 @@
         }
 
         // --- 3. TIMEFRAME LOGIC ---
-        let currentTF = 1; // Секунди
+        let currentTF = 1; 
         
         function setTF(seconds) {
             currentTF = seconds;
-            // Скидаємо графік при зміні ТФ
             series.setData([]);
             realHA = null; displayHA = null; lastRawHA = null; rawCandle = null;
             
-            // Оновлюємо кнопки
             document.querySelectorAll('.tf-btn').forEach(b => b.classList.remove('active'));
             event.target.classList.add('active');
             
-            // Легкий тактильний відгук
             if(tg.HapticFeedback) tg.HapticFeedback.selectionChanged();
         }
 
-        // --- 4. ENGINE: AGG TRADE + TIMEFRAME BUILDER ---
+        // --- 4. ENGINE ---
         let ws = null;
         let realHA = null, displayHA = null, lastRawHA = null;
         let rawCandle = null;
@@ -287,8 +291,6 @@
                 const price = parseFloat(data.p);
                 const eventTime = data.T;
                 
-                // Магія Таймфреймів: Округляємо час до обраного інтервалу
-                // currentTF = 1 (1s), 30 (30s), 60 (1m)
                 const time = Math.floor(eventTime / (currentTF * 1000)) * currentTF;
 
                 if (!rawCandle || time > rawCandle.time) {
@@ -317,7 +319,7 @@
         assetSelect.addEventListener('change', (e) => connectWebSocket(e.target.value));
         connectWebSocket('btcusdt');
 
-        // --- 5. TRADING LOGIC (FIXED VISUAL) ---
+        // --- 5. TRADING LOGIC ---
         let balance = 1000;
         let isTrading = false;
         let betLine = null;
