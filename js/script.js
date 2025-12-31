@@ -17,7 +17,8 @@ if (user) {
 let currentChartTF = 1; 
 let tradeDuration = 30; 
 let tradeAmount = 50;
-let lastPrice = 0;
+// lastPrice - це РЕАЛЬНА ціна (Raw), по якій ми будемо розраховувати виграш
+let lastPrice = 0; 
 let balance = 1000;
 let currentSymbol = 'btcusdt';
 
@@ -36,17 +37,30 @@ const series = chart.addCandlestickSeries({
     downColor: CONFIG.down, borderDownColor: CONFIG.down, wickDownColor: CONFIG.down,
 });
 
+// Додаємо лінію РЕАЛЬНОЇ ціни (Bid line), як у брокерів
+// Вона показує, де саме зараз знаходиться ринок, незалежно від свічки
+const realPriceLine = series.createPriceLine({
+    price: 0,
+    color: 'rgba(255, 255, 255, 0.4)',
+    lineWidth: 1,
+    lineStyle: 2, // Punkter
+    axisLabelVisible: true,
+    title: '',
+});
+
 window.onresize = () => chart.resize(container.clientWidth, container.clientHeight);
 window.resetZoom = () => chart.timeScale().scrollToRealTime();
 
 // --- DATA STREAM ---
 let ws = null;
 let rawCandle = null;
+let haCandle = null; // Heikin Ashi candle
+let prevHaCandle = null;
 
 function connectWebSocket(symbol) {
     if (ws) ws.close();
     series.setData([]);
-    rawCandle = null;
+    rawCandle = null; haCandle = null; prevHaCandle = null;
     currentSymbol = symbol;
 
     ws = new WebSocket(`wss://stream.binance.com:9443/ws/${symbol}@aggTrade`);
@@ -56,19 +70,43 @@ function connectWebSocket(symbol) {
         const price = parseFloat(data.p);
         const time = Math.floor(data.T / (currentChartTF * 1000)) * currentChartTF;
 
+        // Оновлюємо глобальну реальну ціну для ставок
+        lastPrice = price; 
+
+        // 1. Формуємо звичайну свічку (для розрахунків)
         if (!rawCandle || time > rawCandle.time) {
+            // Нова свічка
+            if (haCandle) prevHaCandle = { ...haCandle };
             rawCandle = { time: time, open: rawCandle ? rawCandle.close : price, high: price, low: price, close: price };
         } else {
+            // Оновлення поточної
             rawCandle.high = Math.max(rawCandle.high, price);
             rawCandle.low = Math.min(rawCandle.low, price);
             rawCandle.close = price;
         }
 
-        series.update(rawCandle);
+        // 2. Рахуємо Heikin Ashi (Тільки для візуала!)
+        // Це робить графік плавним, але ціна lastPrice залишається "сирою"
+        let haOpen = rawCandle.open;
+        if (prevHaCandle) {
+            haOpen = (prevHaCandle.open + prevHaCandle.close) / 2;
+        }
         
+        const haClose = (rawCandle.open + rawCandle.high + rawCandle.low + rawCandle.close) / 4;
+        const haHigh = Math.max(rawCandle.high, haOpen, haClose);
+        const haLow = Math.min(rawCandle.low, haOpen, haClose);
+
+        haCandle = { time: time, open: haOpen, high: haHigh, low: haLow, close: haClose };
+
+        // 3. Малюємо HA свічку
+        series.update(haCandle);
+        
+        // 4. Оновлюємо лінію реальної ціни (щоб юзер бачив різницю)
+        realPriceLine.applyOptions({ price: lastPrice });
+
+        // UI
         const digits = price < 1 ? 5 : 2; 
         series.applyOptions({ priceFormat: { precision: digits, minMove: 1/Math.pow(10, digits) } });
-        lastPrice = price;
     };
 }
 connectWebSocket('btcusdt');
@@ -119,10 +157,12 @@ window.setTradeAmount = (amount) => {
     toggleSelector('amount-selector');
 };
 
-// --- TRADING LOGIC ---
+// --- TRADING LOGIC (REAL HARDCORE) ---
 window.startTrade = (direction) => {
     if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
     
+    // 🔥 ВАЖЛИВО: Ставка приймається по lastPrice (РЕАЛЬНА ціна), а не по свічці
+    // Свічка може бути на 50000, а реальна ціна в цю мілісекунду 49995.
     const entryPrice = lastPrice;
     const endTime = Date.now() + (tradeDuration * 1000);
     
@@ -151,6 +191,9 @@ window.startTrade = (direction) => {
 
 function finishTrade(line, direction, entryPrice) {
     let win = false;
+    
+    // 🔥 ФІНАЛ: Порівнюємо з lastPrice (РЕАЛЬНА ціна в момент закриття)
+    // Це створює ефект "останнього ривка", коли ти можеш програти в останню секунду
     if (direction === 'UP' && lastPrice > entryPrice) win = true;
     else if (direction === 'DOWN' && lastPrice < entryPrice) win = true;
 
@@ -182,6 +225,7 @@ function showResult(win, amount) {
     setTimeout(() => { modal.classList.remove('show'); }, 2000);
 }
 
+// Global click handlers
 document.addEventListener('click', (e) => {
     if (!e.target.closest('.input-group') && !e.target.closest('.asset-btn') && !e.target.closest('.selector-overlay')) {
         document.querySelectorAll('.selector-overlay').forEach(s => s.classList.remove('show'));
