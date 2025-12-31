@@ -3,21 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Apex Pro Terminal</title>
-    
+    <title>Apex Pro Realism</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://unpkg.com/lightweight-charts@4.1.1/dist/lightweight-charts.standalone.production.js"></script>
-    
-    <link rel="stylesheet" href="css/style.css?v=2">
+    <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
+    <audio id="sound-click" src="https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.m4a"></audio>
+    <audio id="sound-win" src="https://assets.mixkit.co/active_storage/sfx/2019/2019-preview.m4a"></audio>
+    <audio id="sound-loss" src="https://assets.mixkit.co/active_storage/sfx/2020/2020-preview.m4a"></audio>
+
     <div class="header">
         <div class="user-profile">
-            <img id="user-avatar" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23555'%3E%3Crect width='24' height='24' fill='%23333'/%3E%3C/svg%3E" class="user-avatar">
+            <img id="user-avatar" src="" class="user-avatar">
             <div class="user-name" id="user-name">Trader</div>
         </div>
-
         <div class="header-right">
             <button class="asset-btn" id="asset-btn" onclick="toggleSelector('asset-selector')">
                 <span class="asset-name" id="current-asset">BTC/USDT <span style="font-size:10px">▼</span></span>
@@ -29,19 +30,28 @@
         </div>
     </div>
 
+    <div class="sentiment-bar">
+        <div class="sentiment-fill up" id="sentiment-up" style="height: 50%">
+            <span class="sentiment-val" id="sent-up-val">50%</span>
+        </div>
+        <div class="sentiment-fill down" id="sentiment-down" style="height: 50%">
+            <span class="sentiment-val" id="sent-down-val">50%</span>
+        </div>
+    </div>
+
     <div id="asset-selector" class="selector-overlay">
-        <div class="select-option active" onclick="setAsset('btcusdt', 'BTC/USDT', '82%')">
-            BTC/USDT <span style="font-size:11px; color:#0faf59">82%</span>
-        </div>
-        <div class="select-option" onclick="setAsset('ethusdt', 'ETH/USDT', '78%')">
-            ETH/USDT <span style="font-size:11px; color:#0faf59">78%</span>
-        </div>
-        <div class="select-option" onclick="setAsset('solusdt', 'SOL/USDT', '75%')">
-            SOL/USDT <span style="font-size:11px; color:#0faf59">75%</span>
-        </div>
-        <div class="select-option" onclick="setAsset('dogeusdt', 'DOGE/USDT', '70%')">
-            DOGE/USDT <span style="font-size:11px; color:#0faf59">70%</span>
-        </div>
+        <div class="select-option active" onclick="setAsset('btcusdt', 'BTC/USDT', '82%')">BTC/USDT <span style="color:#0faf59">82%</span></div>
+        <div class="select-option" onclick="setAsset('ethusdt', 'ETH/USDT', '78%')">ETH/USDT <span style="color:#0faf59">78%</span></div>
+    </div>
+    
+    <div id="time-selector" class="selector-overlay" style="bottom: 90px; left: 12px;">
+        <div class="select-option" onclick="setTradeTime(10)">00:10</div>
+        <div class="select-option active" onclick="setTradeTime(30)">00:30</div>
+    </div>
+
+    <div id="amount-selector" class="selector-overlay" style="bottom: 90px; left: 100px;">
+        <div class="select-option" onclick="setTradeAmount(10)">$10</div>
+        <div class="select-option active" onclick="setTradeAmount(50)">$50</div>
     </div>
 
     <div class="chart-controls">
@@ -52,18 +62,6 @@
     </div>
 
     <div id="chart-container"></div>
-
-    <div id="time-selector" class="selector-overlay" style="bottom: 90px; left: 12px;">
-        <div class="select-option" onclick="setTradeTime(10)">00:10</div>
-        <div class="select-option active" onclick="setTradeTime(30)">00:30</div>
-        <div class="select-option" onclick="setTradeTime(60)">01:00</div>
-    </div>
-
-    <div id="amount-selector" class="selector-overlay" style="bottom: 90px; left: 100px;">
-        <div class="select-option" onclick="setTradeAmount(10)">$10</div>
-        <div class="select-option active" onclick="setTradeAmount(50)">$50</div>
-        <div class="select-option" onclick="setTradeAmount(100)">$100</div>
-    </div>
 
     <div class="trade-panel">
         <div class="trade-inputs">
@@ -76,14 +74,9 @@
                 <span class="input-value" id="amount-display">$50</span>
             </div>
         </div>
-
         <div class="trade-buttons">
-            <button class="trade-btn btn-down" onclick="startTrade('DOWN')">
-                <span class="btn-icon">↓</span>
-            </button>
-            <button class="trade-btn btn-up" onclick="startTrade('UP')">
-                <span class="btn-icon">↑</span>
-            </button>
+            <button class="trade-btn btn-down" onclick="startTrade('DOWN')">↓</button>
+            <button class="trade-btn btn-up" onclick="startTrade('UP')">↑</button>
         </div>
     </div>
 
@@ -92,6 +85,6 @@
         <div class="res-val" id="res-val">$0</div>
     </div>
 
-    <script src="js/script.js?v=2"></script>
+    <script src="js/script.js"></script>
 </body>
 </html>
