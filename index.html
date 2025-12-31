@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Apex Ultimate Fixed</title>
+    <title>Apex Ultimate Stable</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://unpkg.com/lightweight-charts@4.1.1/dist/lightweight-charts.standalone.production.js"></script>
 
@@ -15,7 +15,7 @@
             --candle-up: #00ffbb;
             --candle-down: #ff2d55;
             --bet-gold: #ffcf00;
-            --glass-panel: rgba(20, 22, 30, 0.8);
+            --glass-panel: rgba(20, 22, 30, 0.85);
             --border-glass: rgba(255, 255, 255, 0.1);
         }
 
@@ -27,39 +27,23 @@
             user-select: none; -webkit-tap-highlight-color: transparent;
         }
         
-        /* ГРАФІК НА ВЕСЬ ЕКРАН */
-        #chart-container { 
-            position: absolute; 
-            top: 0; left: 0; right: 0; bottom: 0; 
-            z-index: 1; 
-        }
+        #chart-container { position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 1; }
 
-        /* HEADER - ВИПРАВЛЕНО ВІДСТУП (90px) */
+        /* HEADER (SAFE AREA 90px) */
         .header {
             position: absolute; top: 0; left: 0; right: 0;
-            padding: 0 16px; 
-            /* Повернули великий відступ, щоб не лізти під кнопки */
-            padding-top: calc(90px + env(safe-area-inset-top)); 
-            
-            /* Висота блоку контенту */
-            height: 60px; 
-            
-            /* Градієнт зверху, щоб читалось на фоні графіка */
-            background: linear-gradient(180deg, rgba(14,15,20,0.95) 0%, rgba(14,15,20,0.8) 60%, rgba(14,15,20,0) 100%);
-            
-            display: flex; justify-content: space-between; align-items: flex-start; /* flex-start щоб притиснути до верху відступу */
+            padding: 0 16px; padding-top: calc(90px + env(safe-area-inset-top)); 
+            height: 60px; display: flex; justify-content: space-between; align-items: flex-start; 
             z-index: 20; pointer-events: none;
+            background: linear-gradient(180deg, rgba(14,15,20,0.9) 0%, rgba(14,15,20,0) 100%);
         }
-        
-        .header > * { pointer-events: auto; }
+        .user-profile, .market-controls { pointer-events: auto; }
 
-        /* USER PROFILE */
         .user-profile { 
             display: flex; align-items: center; gap: 10px; 
             background: var(--glass-panel); padding: 4px 10px 4px 4px; 
             border-radius: 30px; border: 1px solid var(--border-glass); 
             backdrop-filter: blur(10px);
-            margin-top: 5px; /* Мікро-корекція */
         }
         .user-avatar {
             width: 34px; height: 34px; border-radius: 50%;
@@ -69,10 +53,8 @@
         .user-name { font-weight: 700; font-size: 13px; line-height: 1.2; }
         .balance { font-size: 11px; color: var(--bet-gold); font-weight: 600; }
 
-        /* RIGHT CONTROLS */
         .market-controls { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
         
-        /* Timeframe Selector */
         .tf-selector {
             display: flex; gap: 4px; background: var(--glass-panel); 
             padding: 3px; border-radius: 8px; border: 1px solid var(--border-glass);
@@ -93,13 +75,11 @@
             background: transparent; color: white; border: none; font-weight: 700; font-size: 14px; outline: none;
         }
         
-        /* PRICE */
         .price-container { display: flex; align-items: center; gap: 6px; margin-top: 4px; text-shadow: 0 2px 10px rgba(0,0,0,0.8); }
-        .price { font-size: 26px; font-weight: 800; font-family: 'SF Mono', monospace; letter-spacing: -0.5px; }
+        .price { font-size: 26px; font-weight: 800; font-family: 'SF Mono', monospace; letter-spacing: -0.5px; transition: color 0.1s; }
         
-        /* ZOOM BUTTON */
         #reset-zoom-btn {
-            position: absolute; bottom: 120px; right: 16px;
+            position: absolute; bottom: 130px; right: 16px;
             width: 40px; height: 40px; border-radius: 50%;
             background: var(--glass-panel); color: white; 
             border: 1px solid var(--border-glass); backdrop-filter: blur(5px);
@@ -109,7 +89,6 @@
         }
         #reset-zoom-btn.show { opacity: 1; pointer-events: auto; }
 
-        /* FOOTER CONTROLS */
         .controls-wrapper {
             position: absolute; bottom: 0; left: 0; right: 0; 
             padding: 0 16px 30px 16px; 
@@ -127,7 +106,6 @@
         .btn-up { background: var(--candle-up); color: #003828; }
         .btn-down { background: var(--candle-down); color: #4a0502; }
 
-        /* MODAL */
         .modal {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.9);
             background: #1e222d; padding: 24px; border-radius: 20px; width: 260px; text-align: center;
@@ -143,7 +121,7 @@
         <div class="user-profile">
             <img id="user-avatar" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23555'%3E%3Crect width='24' height='24' fill='%23333'/%3E%3C/svg%3E" class="user-avatar">
             <div class="user-info">
-                <div id="user-name" class="user-name">Trader</div>
+                <div id="user-name" class="user-name">Apex Trader</div>
                 <div class="balance" id="balance">$1,000</div>
             </div>
         </div>
@@ -154,7 +132,6 @@
                 <div class="tf-btn" onclick="setTF(30)">30S</div>
                 <div class="tf-btn" onclick="setTF(60)">1M</div>
             </div>
-
             <div class="asset-wrapper">
                 <select id="asset-select">
                     <option value="btcusdt">BTC/USDT</option>
@@ -162,7 +139,6 @@
                     <option value="solusdt">SOL/USDT</option>
                 </select>
             </div>
-            
             <div class="price-container">
                 <div class="price" id="price">...</div>
             </div>
@@ -189,24 +165,20 @@
 
         const CONFIG = { up: '#00ffbb', down: '#ff2d55', bet: '#ffcf00' };
         
-        // --- 1. USER DATA RESTORED ---
         const user = tg.initDataUnsafe.user;
         if (user) {
             document.getElementById('user-name').innerText = user.first_name || 'Apex Trader';
             if (user.photo_url) document.getElementById('user-avatar').src = user.photo_url;
         }
 
-        // --- 2. CHART SETUP ---
+        // --- CHART SETUP ---
         const container = document.getElementById('chart-container');
         const chart = LightweightCharts.createChart(container, {
             layout: { background: { type: 'solid', color: 'transparent' }, textColor: '#858d9d', fontSize: 12, fontFamily: "system-ui" },
             grid: { vertLines: { visible: false }, horzLines: { color: 'rgba(255,255,255,0.04)', style: 1 } },
-            priceScale: { autoScale: true, scaleMargins: { top: 0.15, bottom: 0.15 } }, 
+            priceScale: { autoScale: true, scaleMargins: { top: 0.2, bottom: 0.2 } }, 
             rightPriceScale: { borderColor: 'transparent' },
-            timeScale: { 
-                borderColor: 'transparent', timeVisible: true, secondsVisible: true, 
-                barSpacing: 16, minBarSpacing: 5 
-            },
+            timeScale: { borderColor: 'transparent', timeVisible: true, secondsVisible: true, barSpacing: 16, minBarSpacing: 5 },
             crosshair: { mode: 1, vertLine: { style: 2, color: 'rgba(255,255,255,0.1)' }, horzLine: { style: 2, color: 'rgba(255,255,255,0.1)' } }
         });
 
@@ -226,21 +198,18 @@
             document.getElementById('reset-zoom-btn').classList.remove('show'); 
         }
 
-        // --- 3. TIMEFRAME LOGIC ---
+        // --- TIMEFRAME & LOGIC ---
         let currentTF = 1; 
         
         function setTF(seconds) {
             currentTF = seconds;
             series.setData([]);
             realHA = null; displayHA = null; lastRawHA = null; rawCandle = null;
-            
             document.querySelectorAll('.tf-btn').forEach(b => b.classList.remove('active'));
             event.target.classList.add('active');
-            
             if(tg.HapticFeedback) tg.HapticFeedback.selectionChanged();
         }
 
-        // --- 4. ENGINE ---
         let ws = null;
         let realHA = null, displayHA = null, lastRawHA = null;
         let rawCandle = null;
@@ -249,8 +218,10 @@
         const priceElement = document.getElementById('price');
         const assetSelect = document.getElementById('asset-select');
 
+        // --- HYBRID ANIMATION LOOP ---
         function animate() {
-            if (realHA && displayHA) {
+            // Анімація (interpolation) працює ТІЛЬКИ для 1S таймфрейма
+            if (currentTF === 1 && realHA && displayHA) {
                 if (realHA.time > displayHA.time) {
                     displayHA = { ...realHA };
                 } else {
@@ -262,8 +233,13 @@
                     }
                 }
                 series.update(displayHA);
+                requestAnimationFrame(animate); // Loop only for 1S
+            } else if (currentTF > 1) {
+                // Для 30S і 1M анімаційний цикл НЕ потрібен, оновлюємо в onmessage
+                // Це зупиняє "дрижання"
+            } else {
+                requestAnimationFrame(animate); // Keep loop alive waiting for data
             }
-            requestAnimationFrame(animate);
         }
         requestAnimationFrame(animate);
 
@@ -290,7 +266,6 @@
                 const data = JSON.parse(event.data);
                 const price = parseFloat(data.p);
                 const eventTime = data.T;
-                
                 const time = Math.floor(eventTime / (currentTF * 1000)) * currentTF;
 
                 if (!rawCandle || time > rawCandle.time) {
@@ -304,7 +279,16 @@
 
                 realHA = calculateHeikinAshi(rawCandle.time, rawCandle.open, rawCandle.high, rawCandle.low, rawCandle.close);
                 
-                if (!displayHA) displayHA = { ...realHA };
+                // ЛОГІКА ОНОВЛЕННЯ ГРАФІКА
+                if (currentTF === 1) {
+                    // Для 1S: тільки оновлюємо ціль для анімації (displayHA наздожене в animate())
+                    if (!displayHA) displayHA = { ...realHA };
+                } else {
+                    // Для 30S/1M: Оновлюємо графік ПРЯМО ТУТ (без анімації)
+                    // Це робить свічку стабільною
+                    series.update(realHA);
+                    displayHA = realHA; // Синхронізуємо для ставок
+                }
 
                 const digits = price < 1 ? 5 : 2; 
                 series.applyOptions({ priceFormat: { precision: digits, minMove: 1/Math.pow(10, digits) } });
@@ -319,7 +303,7 @@
         assetSelect.addEventListener('change', (e) => connectWebSocket(e.target.value));
         connectWebSocket('btcusdt');
 
-        // --- 5. TRADING LOGIC ---
+        // --- TRADING LOGIC ---
         let balance = 1000;
         let isTrading = false;
         let betLine = null;
@@ -329,7 +313,9 @@
             isTrading = true;
             if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred('heavy');
             
-            const entryPrice = displayHA ? displayHA.close : lastPrice;
+            // Беремо поточну відображувану ціну
+            const entryPrice = currentTF === 1 ? (displayHA ? displayHA.close : lastPrice) : lastPrice;
+            
             const betAmount = 50;
             const lineColor = CONFIG.bet;
 
@@ -343,7 +329,7 @@
 
         function finishTrade(direction, entryPrice, betAmount) {
             let win = false;
-            const finalPrice = displayHA ? displayHA.close : lastPrice;
+            const finalPrice = lastPrice;
             
             if (direction === 'UP' && finalPrice > entryPrice) win = true;
             else if (direction === 'DOWN' && finalPrice < entryPrice) win = true;
